@@ -9,69 +9,162 @@ st.markdown("""
 <style>
     /* Main container */
     .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-        max-width: 100%;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    
+    /* Hide header */
+    header {
+        display: none !important;
     }
 
     /* Tabs */
+    .stTabs {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        background: white;
+    }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-        margin-bottom: 0.5rem;
+        gap: 0;
+        margin: 0;
+        background: white;
     }
     .stTabs [data-baseweb="tab"] {
         height: 50px;
         white-space: pre-wrap;
         background-color: #1f77b4;
-        border-radius: 4px;
-        gap: 1px;
+        color: rgba(255, 255, 255, 0.7);
+        border-radius: 0;
+        gap: 0;
         padding: 10px;
+        flex: 1;
     }
     .stTabs [data-baseweb="tab-list"] button {
-        font-size: 16px;
+        font-size: 18px;
     }
-    .stTabs [data-baseweb="tab-list"] button:hover {
-        background-color: #1f77b4;
-    }
-    .stTabs [data-baseweb="tab-list"] [data-baseweb="tab"][aria-selected="true"] {
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
         background-color: #1f77b4;
         color: white;
     }
 
-    /* Camera input */
+    /* Camera container */
+    .stCamera {
+        margin-top: 50px;  /* Height of tabs */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 70px;  /* Leave space for retake button */
+        background: black;
+    }
     .stCamera > label {
         display: none;
     }
     .stCamera > div[data-testid="stCameraInput"] {
         border: none;
         padding: 0;
+        height: 100%;
+        width: 100%;
+        cursor: pointer;
     }
-    button.step-up, button.step-down {
-        display: none;
+    .stCamera video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
     }
 
     /* Image display */
+    .element-container:has(>.stImage) {
+        margin-top: 50px;  /* Height of tabs */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 70px;  /* Leave space for retake button */
+        background: black;
+    }
     .stImage {
-        margin-top: 0.5rem;
+        margin: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+    .stImage img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
     }
 
-    /* Question input */
+    /* Question input and button - fixed at bottom */
+    .stTextInput, .stButton {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 10px;
+        z-index: 1000;
+    }
+    .stTextInput {
+        bottom: 60px;  /* Height of button + padding */
+    }
     .stTextInput > div {
-        padding: 5px;
+        padding: 0;
     }
     .stTextInput input {
         font-size: 16px;
     }
-
-    /* Submit button */
     .stButton > button {
         width: 100%;
         padding: 0.5rem;
         font-size: 16px;
-        margin: 0.5rem 0;
+        margin: 0;
+    }
+
+    /* Retake button - fixed at bottom */
+    .stButton:has(button:contains("↺")) {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: white !important;
+        padding: 10px !important;
+        z-index: 9999 !important;
+        margin: 0 !important;
+    }
+    .stButton:has(button:contains("↺")) button {
+        background-color: #ff4b4b !important;
+        color: white !important;
+        border: none !important;
+        width: 100% !important;
+        padding: 0.75rem !important;
+        font-size: 18px !important;
+        margin: 0 !important;
+        font-weight: bold !important;
+    }
+
+    /* Click instruction */
+    .camera-instruction {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 16px;
+        z-index: 1000;
+        pointer-events: none;
     }
 
     /* File uploader */
+    .stFileUploader {
+        margin-top: 50px;  /* Height of tabs */
+    }
     .stFileUploader > div {
         padding: 0;
     }
@@ -92,9 +185,14 @@ st.markdown("""
     .uploadedFile {
         color: #000000 !important;
     }
-    /* Make drag and drop text visible */
     .stFileUploader [data-testid="stFileUploadDropzone"] {
         color: #000000 !important;
+    }
+
+    /* Solution text */
+    .stMarkdown {
+        margin-bottom: 140px;  /* Space for input and button */
+        padding: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -157,21 +255,22 @@ with tab1:
 
     # Show retake button if we have an image
     if st.session_state.camera_image is not None:
-        if st.button("↺ Retake"):
-            st.session_state.camera_image = None
-            st.rerun()
-        
         image = Image.open(st.session_state.camera_image)
         st.image(image, use_container_width=True)
+        
+        if st.button("↺ Retake Photo", key="retake_button"):
+            st.session_state.camera_image = None
+            st.rerun()
     else:
-        # Show camera input if we don't have an image
-        camera_image = st.camera_input("")
+        # Show camera input with click instruction
+        st.markdown('<div class="camera-instruction">Tap to capture</div>', unsafe_allow_html=True)
+        camera_image = st.camera_input("", label_visibility="collapsed")
         if camera_image:
             st.session_state.camera_image = camera_image
             st.rerun()
 
 with tab2:
-    uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg"])
+    uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
     if uploaded_file:
         image = Image.open(uploaded_file)
         st.image(image, use_container_width=True)
