@@ -1,14 +1,10 @@
 import streamlit as st
 import requests
-from dotenv import load_dotenv
 import os
 import base64
 from PIL import Image
 import io
 from openai import OpenAI
-
-# Load environment variables
-load_dotenv()
 
 # Custom CSS for mobile responsiveness
 st.markdown("""
